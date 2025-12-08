@@ -76,12 +76,10 @@ function main() {
   // GitHub Actions outputs 설정
   if (iosVersion) {
     setGitHubOutput("ios_version", iosVersion.version);
-    setGitHubOutput("ios_build", iosVersion.build);
   }
 
   if (androidVersion) {
     setGitHubOutput("android_version", androidVersion.versionName);
-    setGitHubOutput("android_version_code", androidVersion.versionCode);
   }
 
   return {
