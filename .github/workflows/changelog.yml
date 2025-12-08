@@ -1,0 +1,47 @@
+name: Changelog Generation
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build_and_publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      # ios, Android 버전 변경 시 해당 태그 가져오기
+      - name: Npm Tag
+        id: "npm_tag"
+        run: npm ./bin/getTag.js
+
+      # ios, Android 버전 변경 시 해당 태그 생성
+      - name: "Push IOS tag v${{ steps.npm_tag.outputs.ios_version }}"
+        uses: rickstaa/action-create-tag@v1
+        id: tag_version
+        with:
+          tag: "v${{ steps.npm_tag.outputs.ios_version }}"
+
+      # ios changelog 생성
+      - name: Generate ios Tag
+        id: github_release
+        uses: mikepenz/release-changelog-builder-action@v2.9.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: steps.npm_tag.outputs.ios_tag
+        with:
+          fromTag: "${{ steps.npm_tag.outputs.ios_tag }}"
+          toTag: ${{ github.ref }}
+          commitMode: true
+          configuration: change_ios_log_config.json
