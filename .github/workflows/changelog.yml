@@ -31,19 +31,22 @@ jobs:
           LAST_IOS=$(git tag --list 'ios_*' --sort=-creatordate | head -n 1)
           LAST_ANDROID=$(git tag --list 'android_*' --sort=-creatordate | head -n 1)
 
+          echo "Last IOS Tag: $LAST_IOS"
+          echo "Last Android Tag: $LAST_ANDROID"
+
           echo "last_ios_tag=$LAST_IOS" >> $GITHUB_ENV
           echo "last_android_tag=$LAST_ANDROID" >> $GITHUB_ENV
 
       # IOS Changelog
       - name: "Push IOS tag v${{ steps.new_tag.outputs.ios_version }}"
         uses: rickstaa/action-create-tag@v1
-        if: steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag
+        if: ${{ steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag }}
         id: ios_tag_version
         with:
-          tag: "ios_${{ steps.new_tag.outputs.ios_version }}"
+          tag: "${{ steps.new_tag.outputs.ios_version }}"
 
       - name: Configure changelog
-        if: steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag
+        if: ${{ steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag }}
         run: |
           cat << 'EOF' > changelog_config.json
           {
@@ -57,17 +60,17 @@ jobs:
       - name: Build Changelog
         id: ios_github_release
         uses: mikepenz/release-changelog-builder-action@v5
-        if: steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag
+        if: ${{ steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           commitMode: true
-          fromTag: "ios_${{ steps.last_tags.outputs.last_ios_tag }}"
-          toTag: "ios_${{ steps.new_tag.outputs.ios_version }}"
+          fromTag: "${{ steps.last_tags.outputs.last_ios_tag }}"
+          toTag: "${{ steps.new_tag.outputs.ios_version }}"
           configuration: change_ios_log_config.json
 
       - name: Write changelog to file
-        if: steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag
+        if: ${{ steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag }}
         run: |
           echo "## v${{ steps.new_tag.outputs.ios_version }} - $(date +'%Y-%m-%d')" >> IOS_CHANGELOG.md
           echo "" >> IOS_CHANGELOG.md
@@ -76,7 +79,7 @@ jobs:
           cat IOS_CHANGELOG.md
 
       - name: Commit changelog
-        if: steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag
+        if: ${{ steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
