@@ -33,13 +33,6 @@ jobs:
         with:
           tag: "ios_${{ steps.npm_tag.outputs.ios_version }}"
 
-      # - name: Configure changelog
-      #   run: |
-      #     echo '{"categories": [], "template": "## Commits:\n\n${{ '${{UNCATEGORIZED}}' }}", "pr_template": ${{ '"- ${{MERGE_SHA}} ${{TITLE}}"' }} }' > changelog_config.json
-      #     cat changelog_config.json
-      #     echo "last_tag=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
-      #     echo "curr_commit=$(git rev-parse HEAD)" >> $GITHUB_ENV
-
       - name: Configure changelog
         run: |
           cat << 'EOF' > changelog_config.json
@@ -77,8 +70,22 @@ jobs:
           toTag: "ios_${{ steps.npm_tag.outputs.ios_version }}"
           configuration: change_ios_log_config.json
 
-      - name: Show Changelog
-        run: echo "${{ steps.ios_github_release.outputs.changelog }}"
+      - name: Write changelog to file
+        run: |
+          echo "## v${{ steps.npm_tag.outputs.ios_version }} - $(date +'%Y-%m-%d')" >> IOS_CHANGELOG.md
+          echo "" >> IOS_CHANGELOG.md
+          echo "${{ steps.ios_github_release.outputs.changelog }}" >> IOS_CHANGELOG.md
+          echo "" >> IOS_CHANGELOG.md
+          cat IOS_CHANGELOG.md
+
+      - name: Commit changelog
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add IOS_CHANGELOG.md
+          git commit -m "docs(changelog): v${{ steps.npm_tag.outputs.ios_version }}"
+          git push
 
       # # Android 버전 변경 시 해당 태그 생성
       # - name: "Push Android tag v${{ steps.npm_tag.outputs.android_version }}"
