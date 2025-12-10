@@ -4,7 +4,7 @@ on:
     branches:
       - main
 jobs:
-  build_and_publish:
+  record-logs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -21,87 +21,68 @@ jobs:
 
       - run: npm install
 
-      # ios, Android 버전 변경 시 해당 태그 가져오기
       - name: Npm Tag
-        id: "npm_tag"
+        id: "new_tag"
         run: node ./bin/getTag.js
 
-      # ios 버전 변경 시 해당 태그 생성
-      - name: "Push IOS tag v${{ steps.npm_tag.outputs.ios_version }}"
+      - name: Get last tags
+        id: last_tags
+        run: |
+          LAST_IOS=$(git tag --list 'ios_*' --sort=-creatordate | head -n 1)
+          LAST_ANDROID=$(git tag --list 'android_*' --sort=-creatordate | head -n 1)
+
+          echo "last_ios_tag=$LAST_IOS" >> $GITHUB_ENV
+          echo "last_android_tag=$LAST_ANDROID" >> $GITHUB_ENV
+
+      # IOS Changelog
+      - name: "Push IOS tag v${{ steps.new_tag.outputs.ios_version }}"
         uses: rickstaa/action-create-tag@v1
+        if: steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag
         id: ios_tag_version
         with:
-          tag: "ios_${{ steps.npm_tag.outputs.ios_version }}"
+          tag: "ios_${{ steps.new_tag.outputs.ios_version }}"
 
       - name: Configure changelog
+        if: steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag
         run: |
           cat << 'EOF' > changelog_config.json
           {
             "categories": [],
-            "template": "## Commits\n\n{{UNCATEGORIZED}}",
-            "pr_template": "- {{MERGE_SHA}} {{TITLE}}"
+            "template": "## Commits\n\n{{COMMITS}}",
+            "commit_template": "- {{SHORT_SHA}} {{TITLE}}"
           }
           EOF
-
-          cat changelog_config.json
-
           echo "last_tag=$(git describe --tags --abbrev=0 HEAD^)" >> $GITHUB_ENV
-
-      # ios changelog 생성
-      # - name: Generate ios Tag
-      #   id: ios_github_release
-      #   uses: mikepenz/release-changelog-builder-action@v2.9.0
-      #   if: steps.npm_tag.outputs.ios_version
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   with:
-      #     fromTag: "ios_${{ steps.npm_tag.outputs.ios_version }}"
-      #     toTag: "ios_1.0.0"
-      #     configuration: change_ios_log_config.json
 
       - name: Build Changelog
         id: ios_github_release
         uses: mikepenz/release-changelog-builder-action@v5
+        if: steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           commitMode: true
-          fromTag: "ios_1.0.0"
-          toTag: "ios_${{ steps.npm_tag.outputs.ios_version }}"
+          fromTag: "ios_${{ steps.last_tags.outputs.last_ios_tag }}"
+          toTag: "ios_${{ steps.new_tag.outputs.ios_version }}"
           configuration: change_ios_log_config.json
 
       - name: Write changelog to file
+        if: steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag
         run: |
-          echo "## v${{ steps.npm_tag.outputs.ios_version }} - $(date +'%Y-%m-%d')" >> IOS_CHANGELOG.md
+          echo "## v${{ steps.new_tag.outputs.ios_version }} - $(date +'%Y-%m-%d')" >> IOS_CHANGELOG.md
           echo "" >> IOS_CHANGELOG.md
           echo "${{ steps.ios_github_release.outputs.changelog }}" >> IOS_CHANGELOG.md
           echo "" >> IOS_CHANGELOG.md
           cat IOS_CHANGELOG.md
 
       - name: Commit changelog
+        if: steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add IOS_CHANGELOG.md
-          git commit -m "docs(changelog): v${{ steps.npm_tag.outputs.ios_version }}"
+          git commit -m "docs(changelog): v${{ steps.new_tag.outputs.ios_version }}"
           git push
 
-      # # Android 버전 변경 시 해당 태그 생성
-      # - name: "Push Android tag v${{ steps.npm_tag.outputs.android_version }}"
-      #   uses: rickstaa/action-create-tag@v1
-      #   id: android_tag_version
-      #   with:
-      #     tag: "android_${{ steps.npm_tag.outputs.android_version }}"
-      # # android changelog 생성
-      # - name: Generate Android Tag
-      #   id: android_github_release
-      #   uses: mikepenz/release-changelog-builder-action@v2.9.0
-      #   env:
-      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      #   if: steps.npm_tag.outputs.android_version
-      #   with:
-      #     fromTag: "android_${{ steps.npm_tag.outputs.android_version }}"
-      #     toTag: "android_${{ github.ref }}"
-      #     commitMode: true
-      #     configuration: change_ios_log_config.json
+      # Android Changelog
