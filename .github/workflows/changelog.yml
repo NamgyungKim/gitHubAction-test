@@ -48,7 +48,7 @@ jobs:
       - name: Configure changelog
         if: ${{ steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag }}
         run: |
-          cat << 'EOF' > changelog_config.json
+          cat << 'EOF' > change_ios_log_config.json
           {
             "categories": [],
             "template": "## Commits:\n\n${{ '${{UNCATEGORIZED}}' }}",
@@ -90,7 +90,62 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add IOS_CHANGELOG.md
+          git add ANDROID_CHANGELOG.md
           git commit -m "docs(changelog): v${{ steps.new_tag.outputs.ios_version }}"
           git push
 
       # Android Changelog
+      - name: "Push Android tag v${{ steps.new_tag.outputs.android_version }}"
+        uses: rickstaa/action-create-tag@v1
+        if: ${{ steps.new_tag.outputs.android_version != steps.last_tags.outputs.last_android_tag }}
+        id: android_tag_version
+        with:
+          tag: "${{ steps.new_tag.outputs.android_version }}"
+
+      - name: Configure changelog
+        if: ${{ steps.new_tag.outputs.android_version != steps.last_tags.outputs.last_android_tag }}
+        run: |
+          cat << 'EOF' > change_android_log_config.json
+          {
+            "categories": [],
+            "template": "## Commits:\n\n${{ '${{UNCATEGORIZED}}' }}",
+            "pr_template": ${{ '"- ${{MERGE_SHA}} ${{TITLE}}"' }}
+          }
+          EOF
+
+      - name: Build Changelog
+        id: android_github_release
+        uses: mikepenz/release-changelog-builder-action@v5
+        if: ${{ steps.new_tag.outputs.android_version != steps.last_tags.outputs.last_android_tag }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          commitMode: true
+          fromTag: "${{ steps.last_tags.outputs.last_android_tag }}"
+          toTag: "${{ steps.new_tag.outputs.android_version }}"
+          configuration: change_android_log_config.json
+
+      - name: Write changelog to file
+        if: ${{ steps.new_tag.outputs.android_version != steps.last_tags.outputs.last_android_tag }}
+        run: |
+          echo "## v${{ steps.new_tag.outputs.android_version }} - $(date +'%Y-%m-%d')" > temp.md
+          echo "" >> temp.md
+          echo "${{ steps.android_github_release.outputs.changelog }}" >> temp.md
+          echo "" >> temp.md
+
+          if [ -f ANDROID_CHANGELOG.md ]; then
+            cat ANDROID_CHANGELOG.md >> temp.md
+          fi
+
+          mv temp.md ANDROID_CHANGELOG.md 
+          cat ANDROID_CHANGELOG.md
+
+      - name: Commit changelog
+        if: ${{ steps.new_tag.outputs.android_version != steps.last_tags.outputs.last_android_tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add ANDROID_CHANGELOG.md
+          git commit -m "docs(changelog): v${{ steps.new_tag.outputs.android_version }}"
+          git push
