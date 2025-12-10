@@ -34,8 +34,8 @@ jobs:
           echo "Last IOS Tag: $LAST_IOS"
           echo "Last Android Tag: $LAST_ANDROID"
 
-          echo "last_ios_tag=$LAST_IOS" >> $GITHUB_ENV
-          echo "last_android_tag=$LAST_ANDROID" >> $GITHUB_ENV
+          echo "last_ios_tag=$LAST_IOS" >> $GITHUB_OUTPUT
+          echo "last_android_tag=$LAST_ANDROID" >> $GITHUB_OUTPUT
 
       # IOS Changelog
       - name: "Push IOS tag v${{ steps.new_tag.outputs.ios_version }}"
