@@ -51,11 +51,10 @@ jobs:
           cat << 'EOF' > changelog_config.json
           {
             "categories": [],
-            "template": "## Commits\n\n{{COMMITS}}",
-            "commit_template": "- {{SHORT_SHA}} {{TITLE}}"
+            "template": "## Commits:\n\n${{ '${{UNCATEGORIZED}}' }}",
+            "pr_template": ${{ '"- ${{MERGE_SHA}} ${{TITLE}}"' }}
           }
           EOF
-          echo "last_tag=$(git describe --tags --abbrev=0 HEAD^)" >> $GITHUB_ENV
 
       - name: Build Changelog
         id: ios_github_release
@@ -72,10 +71,16 @@ jobs:
       - name: Write changelog to file
         if: ${{ steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag }}
         run: |
-          echo "## v${{ steps.new_tag.outputs.ios_version }} - $(date +'%Y-%m-%d')" >> IOS_CHANGELOG.md
-          echo "" >> IOS_CHANGELOG.md
-          echo "${{ steps.ios_github_release.outputs.changelog }}" >> IOS_CHANGELOG.md
-          echo "" >> IOS_CHANGELOG.md
+          echo "## v${{ steps.new_tag.outputs.ios_version }} - $(date +'%Y-%m-%d')" > temp.md
+          echo "" >> temp.md
+          echo "${{ steps.ios_github_release.outputs.changelog }}" >> temp.md
+          echo "" >> temp.md
+
+          if [ -f IOS_CHANGELOG.md ]; then
+            cat IOS_CHANGELOG.md >> temp.md
+          fi
+
+          mv temp.md IOS_CHANGELOG.md 
           cat IOS_CHANGELOG.md
 
       - name: Commit changelog
