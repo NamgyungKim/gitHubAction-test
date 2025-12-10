@@ -45,17 +45,6 @@ jobs:
         with:
           tag: "${{ steps.new_tag.outputs.ios_version }}"
 
-      - name: Configure changelog
-        if: ${{ steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag }}
-        run: |
-          cat << 'EOF' > change_ios_log_config.json
-          {
-            "categories": [],
-            "template": "## Commits:\n\n${{ '${{UNCATEGORIZED}}' }}",
-            "pr_template": ${{ '"- ${{MERGE_SHA}} ${{TITLE}}"' }}
-          }
-          EOF
-
       - name: Build Changelog
         id: ios_github_release
         uses: mikepenz/release-changelog-builder-action@v5
@@ -66,12 +55,12 @@ jobs:
           commitMode: true
           fromTag: "${{ steps.last_tags.outputs.last_ios_tag }}"
           toTag: "${{ steps.new_tag.outputs.ios_version }}"
-          configuration: change_ios_log_config.json
+          configuration: ./.github/logConfig.json
 
       - name: Write changelog to file
         if: ${{ steps.new_tag.outputs.ios_version != steps.last_tags.outputs.last_ios_tag }}
         run: |
-          echo "## v${{ steps.new_tag.outputs.ios_version }} - $(date +'%Y-%m-%d')" > temp.md
+          echo "## ${{ steps.new_tag.outputs.ios_version }} - $(date +'%Y-%m-%d')" > temp.md
           echo "" >> temp.md
           echo "${{ steps.ios_github_release.outputs.changelog }}" >> temp.md
           echo "" >> temp.md
@@ -102,17 +91,6 @@ jobs:
         with:
           tag: "${{ steps.new_tag.outputs.android_version }}"
 
-      - name: Configure changelog
-        if: ${{ steps.new_tag.outputs.android_version != steps.last_tags.outputs.last_android_tag }}
-        run: |
-          cat << 'EOF' > change_android_log_config.json
-          {
-            "categories": [],
-            "template": "## Commits:\n\n${{ '${{UNCATEGORIZED}}' }}",
-            "pr_template": ${{ '"- ${{MERGE_SHA}} ${{TITLE}}"' }}
-          }
-          EOF
-
       - name: Build Changelog
         id: android_github_release
         uses: mikepenz/release-changelog-builder-action@v5
@@ -123,12 +101,12 @@ jobs:
           commitMode: true
           fromTag: "${{ steps.last_tags.outputs.last_android_tag }}"
           toTag: "${{ steps.new_tag.outputs.android_version }}"
-          configuration: change_android_log_config.json
+          configuration: ./.github/logConfig.json
 
       - name: Write changelog to file
         if: ${{ steps.new_tag.outputs.android_version != steps.last_tags.outputs.last_android_tag }}
         run: |
-          echo "## v${{ steps.new_tag.outputs.android_version }} - $(date +'%Y-%m-%d')" > temp.md
+          echo "## ${{ steps.new_tag.outputs.android_version }} - $(date +'%Y-%m-%d')" > temp.md
           echo "" >> temp.md
           echo "${{ steps.android_github_release.outputs.changelog }}" >> temp.md
           echo "" >> temp.md

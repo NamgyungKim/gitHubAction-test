@@ -1,0 +1,5 @@
+{
+  "categories": [],
+  "template": "### Commits\n\n#{{UNCATEGORIZED}}",
+  "commit_template": "- #{{TITLE}}"
+}
