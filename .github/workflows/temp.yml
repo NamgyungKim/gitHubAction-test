@@ -1,0 +1,22 @@
+name: NoFunctionalWorkflow
+on:
+  push:
+    branches:
+      - develop
+jobs:
+  record-logs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install
